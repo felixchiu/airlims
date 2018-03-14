@@ -4,9 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ApplicationsApplication {
+public class AirLimsApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ApplicationsApplication.class, args);
+		SpringApplication.run(AirLimsApplication.class, args);
 	}
 }

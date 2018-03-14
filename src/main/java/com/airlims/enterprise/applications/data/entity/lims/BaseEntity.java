@@ -67,8 +67,9 @@ public class BaseEntity implements Serializable {
     private Integer version;
 
     @JsonProperty("source_system")
-    @Column(name = "source_system")
+    @JoinColumn(name = "source_system_id", nullable = false)
     @JsonView(DataTablesOutput.View.class)
+    @ManyToOne(cascade = CascadeType.ALL)
     private SourceSystem sourceSystem;
 
     @JsonProperty("source_id")
