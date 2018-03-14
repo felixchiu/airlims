@@ -1,0 +1,11 @@
+#spring:
+#  profiles:
+#    active:
+#  application:
+#    name: airlims
+#  cloud:
+#    config:
+#      uri:
+#      username:
+#      password:
+#

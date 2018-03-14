@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.airlims.enterprise</groupId>
-	<artifactId>applications</artifactId>
+	<artifactId>airLims</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -14,7 +14,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.0.0.RELEASE</version>
+		<version>1.5.10.RELEASE</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
@@ -22,13 +22,71 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
+
+		<docker-maven-plugin.version>0.15.3</docker-maven-plugin.version>
+		<docker.push.registry>quay.io</docker.push.registry>
+		<java.image>java:8-jdk</java.image>
+		<build.number>NOBUILD</build.number>
+		<image.name>air-lims:${build.number}</image.name>
+		<api.basedir>/opt/air-lims</api.basedir>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-config</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-velocity</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.darrachequesne</groupId>
+			<artifactId>spring-data-jpa-datatables</artifactId>
+			<version>4.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.16.6</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.dozer</groupId>
+			<artifactId>dozer</artifactId>
+			<version>5.5.1</version>
+		</dependency>
+
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -37,11 +95,69 @@
 		</dependency>
 	</dependencies>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Camden.SR7</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>${docker-maven-plugin.version}</version>
+				<configuration>
+					<autoPull>always</autoPull>
+					<pushRegistry>${docker.push.registry}</pushRegistry>
+					<images>
+						<image>
+							<name>${image.name}</name>
+							<build>
+								<env>
+									<platform.base>${api.basedir}</platform.base>
+									<TZ>America/Los_Angeles</TZ>
+								</env>
+								<from>${java.image}</from>
+								<assembly>
+									<mode>dir</mode>
+									<basedir>${api.basedir}/jar</basedir>
+									<descriptorRef>artifact</descriptorRef>
+								</assembly>
+								<runCmds>
+									<run>ln -snf /usr/share/zoneinfo/US/Pacific /etc/localtime</run>
+									<run>mkdir -p ${api.basedir}</run>
+									<run>curl https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem > /tmp/rds-ca-2015-root.pem</run>
+									<run>ALIAS=$(openssl x509 -noout -text -in /tmp/rds-ca-2015-root.pem | perl -ne 'next unless /Subject:/; s/.*CN=//; print')</run>
+									<run>keytool -import -keystore  $JAVA_HOME/jre/lib/security/cacerts -storepass changeit -noprompt -alias "$ALIAS" -file /tmp/rds-ca-2015-root.pem</run>
+								</runCmds>
+								<ports>
+									<port>8770</port>
+								</ports>
+								<workdir>${api.basedir}</workdir>
+								<entryPoint>
+									<arg>java</arg>
+									<arg>-jar</arg>
+									<arg>${api.basedir}/jar/${project.build.finalName}.${project.packaging}</arg>
+									<arg>--spring.config.name=non-existent-name</arg>
+									<arg>--spring.config.location=${api.basedir}/conf/application.properties</arg>
+								</entryPoint>
+							</build>
+						</image>
+					</images>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

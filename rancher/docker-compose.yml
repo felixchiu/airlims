@@ -1,0 +1,22 @@
+api:
+  image: $APP_IMAGE
+  environment:
+    SPRING_PROFILES_ACTIVE:
+    SPRING_CLOUD_CONFIG_PASSWORD:
+    HEALTH_CONFIG_ENABLED: 'false'
+  volumes:
+    - $APP_HOST_LOG_PATH:/opt/airlims/logs
+    - $APP_VOLUME:/opt/airlims/conf
+  links:
+    - redis:redis
+redis:
+  image: "redis"
+  command: redis-server --appendonly yes
+  volumes:
+    - $REDIS_STORAGE_PATH:/data
+lb:
+  ports:
+    - $APP_PORT:8770
+  image: rancher/load-balancer-service
+  links:
+    - api:api
