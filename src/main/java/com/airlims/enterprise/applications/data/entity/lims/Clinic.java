@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.datatables.mapping.DataTablesOutput;
 
 import javax.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by Felix Chiu on 3/14/18.
@@ -31,5 +33,9 @@ public class Clinic extends BaseEntity {
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name="contact_info_id")
     private ContactInfo contactInfo;
+
+    @OneToMany
+    private Set<ContactInfo> satellites = new HashSet<>();
+
 
 }

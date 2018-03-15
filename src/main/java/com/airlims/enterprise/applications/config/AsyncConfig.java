@@ -22,6 +22,11 @@ public class AsyncConfig {
         return new ThreadPoolTaskExecutor();
     }
 
+    @Bean(name = "messageLogExecutor")
+    public Executor messageLogExecutor() {
+        log.info("Building message log executor");
+        return new ThreadPoolTaskExecutor();
+    }
 
 
 }

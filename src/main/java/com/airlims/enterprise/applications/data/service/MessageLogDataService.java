@@ -31,7 +31,7 @@ public class MessageLogDataService {
         log(messageId, logDatetime, messageType, messageBody, ACTION_RECEIVE);
     }
 
-    @Async
+    @Async("messageLogExecutor")
     public void log(String messageId, Date logDatetime, String messageType, String messageBody, String action) {
         repository.saveAndFlush(MessageLog.builder()
                 .id(UUID.randomUUID().toString())
